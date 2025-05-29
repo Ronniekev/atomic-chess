@@ -1,6 +1,8 @@
 # atomic-chess
 Author: Ronniekev
+
 Kevin Penate's
+
 Python CLI Atomic Chess
 
 - Languages: Python
