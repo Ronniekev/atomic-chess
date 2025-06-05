@@ -27,7 +27,7 @@ This was one of my first projects and an exploration into the fundamentals of ga
 python atomic_chess.py
 ```
 
-🧪 Testing
+## 🧪 Testing
 To ensure the game behaves as expected, there's a dedicated unittest test suite in test_atomic_chess.py.
 
 The tests cover typical opening sequences, longer move chains, invalid input handling, and edge cases like illegal captures or king explosions. There's even a test that confirms the game ends when a king is caught in an explosion. Each test uses Python’s built-in unittest library.
