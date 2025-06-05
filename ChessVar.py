@@ -5,73 +5,69 @@
 # of the game. Has helper functions that calculate the moves a piece can make and returns a list of valid moves.
 
 
-def bishop_helper(chess_board, temp, temp_row, temp_help, row_help, capture_list, list1, bishop_list):
-    """returns a list of valid moves for a bishop piece"""
-    for x in range(9):
-        if 0 < temp < 9 and 0 < temp_row < 9:
-            if chess_board[temp_row][temp] in list1:
-                break
-            elif chess_board[temp_row][temp] == ".":
-                bishop_list.append([temp_row, temp])
-            elif chess_board[temp_row][temp] in capture_list:
-                bishop_list.append([temp_row, temp])
-                break
-        temp_row = temp_row + row_help
-        temp = temp + temp_help
-    return
-
-
-def knight_helper(chess_board, temp_column, temp_row, knight_list, capture_list, list1):
-    """returns a list of valid moves for a bishop piece"""
-
-    if 0 < temp_column < 9 and 0 < temp_row < 9:
-        if chess_board[temp_row][temp_column] in list1:
-            pass
-        elif chess_board[temp_row][temp_column] == ".":
-            knight_list.append([temp_row, temp_column])
-        elif chess_board[temp_row][temp_column] in capture_list:
-            knight_list.append([temp_row, temp_column])
-    return
-
-
-def rook_helper(chess_board, temp_column, temp_row, row_help, column_help, capture_list, list1, rook_list):
-    """returns a list of valid moves for a rook piece"""
-
-    for x in range(9):
-        if 0 < temp_column < 9 and 0 < temp_row < 9 and chess_board[temp_row][temp_column] not in list1:
-            if chess_board[temp_row][temp_column] == ".":
-                rook_list.append([temp_row, temp_column])
-
-            if chess_board[temp_row][temp_column] in capture_list:
-                rook_list.append([temp_row, temp_column])
-                break
-            temp_row = temp_row + row_help
-            temp_column = temp_column + column_help
-    return
-
-
-def king_helper(chess_board, temp_column, temp_row, king_list):
-    """returns a list of valid moves for a king piece"""
-    if 0 < temp_column < 9 and 0 < temp_row < 9:
-        if chess_board[temp_row][temp_column] == ".":
-            king_list.append([temp_row, temp_column])
-            return
-
-
 def is_move_valid(move_to, move_list):
-    """returns True if a move is valid and False if it not"""
+    """Check if a move is valid."""
+    return move_to in move_list
 
-    if move_to in move_list:
-        return True
-    else:
-        return False
+def bishop_helper(board, col, row, d_col, d_row, capturable, friendly, moves):
+    """Compute bishop moves in one direction."""
+    for _ in range(8):
+        col += d_col
+        row += d_row
+        if 0 < col < 9 and 0 < row < 9:
+            piece = board[row][col]
+            if piece in friendly:
+                break
+            moves.append([row, col])
+            if piece in capturable:
+                break
+        else:
+            break
 
 
-def king_check_help(chess_board, temp_column, temp_row, king_check):
-    """helps create a list of chess pieces to determine if an explosion can proceed"""
+def knight_helper(board, col, row, capturable, friendly, moves):
+    """Compute all knight moves."""
+    deltas = [(2, 1), (1, 2), (-1, 2), (-2, 1),
+              (-2, -1), (-1, -2), (1, -2), (2, -1)]
+    for dc, dr in deltas:
+        new_col, new_row = col + dc, row + dr
+        if 0 < new_col < 9 and 0 < new_row < 9:
+            piece = board[new_row][new_col]
+            if piece not in friendly:
+                moves.append([new_row, new_col])
 
-    if 0 < temp_column < 9 and 0 < temp_row < 9:
-        king_check.append(chess_board[temp_row][temp_column])
+
+def rook_helper(board, col, row, d_col, d_row, capturable, friendly, moves):
+    """Compute rook moves in one direction."""
+    for _ in range(8):
+        col += d_col
+        row += d_row
+        if 0 < col < 9 and 0 < row < 9:
+            piece = board[row][col]
+            if piece in friendly:
+                break
+            moves.append([row, col])
+            if piece in capturable:
+                break
+        else:
+            break
+
+
+def king_helper(board, col, row, moves):
+    """Compute adjacent king moves."""
+    for dc in [-1, 0, 1]:
+        for dr in [-1, 0, 1]:
+            if dc == 0 and dr == 0:
+                continue
+            new_col, new_row = col + dc, row + dr
+            if 0 < new_col < 9 and 0 < new_row < 9 and board[new_row][new_col] == ".":
+                moves.append([new_row, new_col])
+
+
+def king_check_help(board, col, row, king_check):
+    """Collect chess pieces to near explosion."""
+    if 0 < col < 9 and 0 < row < 9:
+        king_check.append(board[row][col])
     return
 
 
@@ -95,100 +91,80 @@ class ChessVar:
         self._white_pieces = ["q", "k", "b", "n", "r", "p"]
 
     def make_move(self, move_from, move_to):
-        """receives string parameters for board locations, to move a piece from and to,if the move is valid
-        the board will reflect the change"""
-
-        status = self.get_game_state()
-        if status != "UNFINISHED":
+        if self.get_game_state() != "UNFINISHED":
             return False
 
         player = self.player_turn()
         valid_moves = self.list_of_moves(move_from, player)
-        move_from = self.get_location(move_from)
-        move_to = self.get_location(move_to)
+        source = self.get_location(move_from)
+        destination = self.get_location(move_to)
 
-        is_valid = is_move_valid(move_to, valid_moves)
-        if is_valid:
-            if self._board[move_to[0]][move_to[1]] == ".":
-                self._board[move_to[0]][move_to[1]] = self._board[move_from[0]][move_from[1]]
-                self._board[move_from[0]][move_from[1]] = "."
+        
+        if is_move_valid(destination, valid_moves):
+            if self._board[destination[0]][destination[1]] == ".":
+                self._board[destination[0]][destination[1]] = self._board[source[0]][source[1]]
+                self._board[source[0]][source[1]] = "."
                 self._player_turn += 1
                 return True
-
-            elif self.explosion(move_to) is False:
+            elif not self.explosion(destination):
                 return False
             else:
-                self.explosion(move_to)
-                self._board[move_from[0]][move_from[1]] = "."
-                self._board[move_to[0]][move_to[1]] = "."  # the piece captured and the capturing piece are removed
+                self.explosion(destination)
+                self._board[source[0]][source[1]] = "."
+                self._board[destination[0]][destination[1]] = "."
                 self._player_turn += 1
                 return True
-
-        else:
-
-            return False
+        return False
 
     def get_game_state(self):
-        """returns status of the game"""
-        check_game = self._white_pieces + self._black_pieces
+        """Computs game status."""
 
-        if "k" in check_game and "K" in check_game:
+        if "k" in self._white_pieces and "K" in self._black_pieces:
             return "UNFINISHED"
-        elif "k" in check_game:
+        elif "k" in self._white_pieces:
             return "WHITE_WON"
         else:
             return "BLACK_WON"
 
     def explosion(self, move):
-        """takes a move and updates the board to reflect an explosion if a capture is made"""
-        column = move[1]
-        row = move[0]
-        king_check = []
-        values = [-1, 1]
+        """Computes pieces valid to be removed during an explosion."""
+        row, col = move
+        check = []
+        for dc, dr in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,-1),(-1,1),(1,1)]:
+            king_check_help(self._board, col+dc, row+dr, check)
 
-        for value in values:
-            king_check_help(self._board, column, row + value, king_check)
-            king_check_help(self._board, column + value, row, king_check)
-            king_check_help(self._board, column + value, row - 1, king_check)
-            king_check_help(self._board, column + value, row + 1, king_check)
+        if "K" in check and "k" in check:
+            return False
 
-        if "K" in king_check and "k" in king_check:
-            return False  # confirms there are not two consecutive kings
+        for dc, dr in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,-1),(-1,1),(1,1)]:
+            row, col = row+dr, col+dc
+            if 0 < col < 9 and 0 < row < 9:
+                if self._board[row][col] not in ("p", "P"):
+                    self.remove_king(col, row)
+        return True
 
-        for value in values:
-            self.explosion_helper(column + value, row - 1)
-            self.explosion_helper(column + value, row + 1)
-            self.explosion_helper(column, row + value)
-            self.explosion_helper(column + value, row)
+    def remove_king(self, col, row):
+        """Computes King to be removed."""
+        piece = self._board[row][col]
+        if piece == "k":
+            if "k" in self._white_pieces:
+                self._white_pieces.remove('k')  
 
-        return
-
-    def explosion_helper(self, temp_column, temp_row):
-        """helps sort through an explosion and removes pieces as needed"""
-        if 0 < temp_column < 9 and 0 < temp_row < 9:
-            if self._board[temp_row][temp_column] != "p" or self._board[temp_row][temp_column] != "P":
-                self.remove_king(temp_column, temp_row)
-
-    def remove_king(self, column, row):
-        """checks to see if a king should be removed and the game updated to appropriate winner"""
-        if self._board[row][column] == "k":
-            self._white_pieces.remove('k')
-            self.get_game_state()
-
-        elif self._board[row][column] == "K":
-            self._white_pieces.remove('k')
-            self.get_game_state()
-        self._board[row][column] = "."
+        elif piece == "K":
+            if "K" in self._black_pieces:
+                self._black_pieces.remove('K')
+        
+        self._board[row][col] = "."
+        self.get_game_state()
         return
 
     def print_board(self):
-        """prints the current chess board"""
+        """Prints current board placement"""
         for row in self._board:
             print(*row)
 
     def player_turn(self):
-        """returns the players color of who's turn it is. Even numbers will be white turn, odd numbers
-        will indicate black turn"""
+        """Computes who's turn it is"""
 
         if self._player_turn % 2 == 0:
             return "white"
@@ -198,164 +174,94 @@ class ChessVar:
     def get_location(self, move):
         """returns int variable for index location of pieces, if the location is not on the board it will return
         False"""
-        location = []
-        if move[1] == "8":
-            location.append(1)
-        elif move[1] == "7":
-            location.append(2)
-        elif move[1] == "6":
-            location.append(3)
-        elif move[1] == "5":
-            location.append(4)
-        elif move[1] == "4":
-            location.append(5)
-        elif move[1] == "3":
-            location.append(6)
-        elif move[1] == "2":
-            location.append(7)
-        elif move[1] == "1":
-            location.append(8)
-        else:
+        rank_map = {"8": 1, "7": 2, "6": 3, "5": 4, "4": 5, "3": 6, "2": 7, "1": 8}
+        file = move[0]
+        rank = move[1]
+        if rank not in rank_map or file not in self._board[0]:
             return []
-
-        for value in self._board[0]:
-            if value == move[0]:
-                location.append(self._board[0].index(move[0]))
-                break
-        return location
+        return [rank_map[rank], self._board[0].index(file)]
 
     def list_of_moves(self, move_from, player):
         """returns a list of valid moves for the piece chosen by a player"""
         index = self.get_location(move_from)
-        column = index[1]
-        row = index[0]
+        if not index:
+            return []
+        row, col= index
+        piece = self._board[row][col]
 
-        if self._board[row][column] in self._white_pieces:
-            if player == "white":
-                list_1 = self._white_pieces
-                capture_pieces = self._black_pieces
-            else:
-                return []
+        friendly, capturable = (
+            (self._white_pieces, self._black_pieces) if player == "white" else
+            (self._black_pieces, self._white_pieces)
+        )
 
-        elif self._board[row][column] in self._black_pieces:
-            if player == "black":
-                list_1 = self._black_pieces
-                capture_pieces = self._white_pieces
-            else:
-                return []
-
-        if self._board[row][column] == "p" or self._board[row][column] == "P":
-            return self.pawn_moves(column, row, player)
-
-        elif self._board[row][column] == "n" or self._board[row][column] == "N":
-            return self.knight_moves(column, row, list_1, capture_pieces)
-
-        elif self._board[row][column] == "r" or self._board[row][column] == "R":
-            return self.rook_moves(column, row, list_1, capture_pieces)
-
-        elif self._board[row][column] == "b" or self._board[row][column] == "B":
-            return self.bishop_moves(column, row, list_1, capture_pieces)
-
-        elif self._board[row][column] == "q" or self._board[row][column] == "Q":
-            return self.queen_moves(column, row, list_1, capture_pieces)
-
-        elif self._board[row][column] == "k" or self._board[row][column] == "K":
-            return self.king_moves(column, row)
-        else:
+        if piece not in friendly:
             return []
 
-    def pawn_moves(self, column, row, player):
+        piece_type = piece.lower()
+        dispatch = {
+            "p": self.pawn_moves,
+            "n": lambda c, r: self.knight_moves(col, row, friendly, capturable),
+            "r": lambda c, r: self.rook_moves(col, row, friendly, capturable),
+            "b": lambda c, r: self.bishop_moves(col, row, friendly, capturable),
+            "q": lambda c, r: self.queen_moves(col, row, friendly, capturable),
+            "k": lambda c, r: self.king_moves(col, row),
+        }
+
+        return dispatch[piece_type](col, row)
+        
+
+    def pawn_moves(self, col, row):
         """returns a list of valid moves for a pawn piece"""
-        pawn_list = []
-        if player == "black":
-            if row == 2:
-                if self._board[row + 2][column] == ".":
-                    pawn_list.append([row + 2, column])
-            if self._board[row + 1][column] == ".":
-                pawn_list.append([row + 1, column])
+        moves = []
+        direction = 1 if self.player_turn() == "black" else -1
+        start_row = 2 if direction == 1 else 7
+        capturables = self._white_pieces if direction == 1 else self._black_pieces
 
-            if self._board[row + 1][column + 1] in self._white_pieces:
-                pawn_list.append([(row + 1), (column + 1)])
+        if self._board[row + direction][col] == ".":
+            moves.append([row + direction, col])
+            if row == start_row and self._board[row + 2 * direction][col] == ".":
+                moves.append([row + 2 * direction, col])
 
-            if self._board[row + 1][column - 1] in self._white_pieces:
-                pawn_list.append([(row + 1), (column - 1)])
+        for dc in [-1, 1]:
+            if 0 < col + dc < 9 and self._board[row + direction][col + dc] in capturables:
+                moves.append([row + direction, col + dc])
 
-            return pawn_list
+        return moves
 
-        else:
-            if row == 7:
-                if self._board[row - 2][column] == ".":
-                    pawn_list.append([row - 2, column])
-            if self._board[row - 1][column] == ".":
-                pawn_list.append([row - 1, column])
+    def rook_moves(self, col, row, friendly, capturable):
+        """Computes valid Rook Moves."""
+        moves = []
+        for dc, dr in [(1,0), (-1,0), (0,1), (0,-1)]:
 
-            if self._board[row - 1][column - 1] in self._black_pieces:
-                pawn_list.append([(row - 1), (column - 1)])
-            if self._board[row - 1][column + 1] in self._black_pieces:
-                pawn_list.append([(row - 1), (column + 1)])
-            return pawn_list
+            rook_helper(self._board, col, row, dc, dr, capturable, friendly, moves)
+        return moves
 
-    def rook_moves(self, column, row, list_1, capture_pieces):
-        """assigns appropriate variables to the rook helper function and returns a list of valid moves"""
-        rook_list = []
+    def knight_moves(self, col, row, friendly, capturable):
+        """Computes knight moves."""
+        moves = []
+        knight_helper(self._board, col, row, capturable, friendly, moves)
+        return capturable
 
-        rook_helper(self._board, column + 1, row, 0, 1, capture_pieces, list_1, rook_list)
-
-        rook_helper(self._board, column - 1, row, 0, -1, capture_pieces, list_1, rook_list)
-
-        rook_helper(self._board, column, row + 1, 1, 0, capture_pieces, list_1, rook_list)
-
-        rook_helper(self._board, column, row - 1, -1, 0, capture_pieces, list_1, rook_list)
-
-        return rook_list
-
-    def knight_moves(self, column, row, list_1, capture_pieces):
-        """assigns appropriate variables to the knight helper function and returns a list of valid moves"""
-        knight_list = []
-
-        values = [-1, 1]
-
-        for value in values:
-            knight_helper(self._board, column + 2, row + value, knight_list, capture_pieces, list_1)
-            knight_helper(self._board, column - 2, row + value, knight_list, capture_pieces, list_1)
-            knight_helper(self._board, column + value, row - 2, knight_list, capture_pieces, list_1)
-            knight_helper(self._board, column + value, row + 2, knight_list, capture_pieces, list_1)
-
-        return knight_list
-
-    def bishop_moves(self, column, row, list_1, capture_pieces):
-        """assigns appropriate variables to the bishop helper function and returns a list of valid moves"""
+    def bishop_moves(self, col, row, friendly, capturable):
+        """Computes bishop valid moves."""
         bishop_list = []
-
-        bishop_helper(self._board, column + 1, row - 1, 1, -1, capture_pieces, list_1, bishop_list)
-
-        bishop_helper(self._board, column + 1, row + 1, 1, 1, capture_pieces, list_1, bishop_list)
-
-        bishop_helper(self._board, column - 1, row + 1, -1, 1, capture_pieces, list_1, bishop_list)
-
-        bishop_helper(self._board, column - 1, row - 1, -1, -1, capture_pieces, list_1, bishop_list)
+        for dc, dr in [(1,1), (1,-1), (-1,1), (-1,-1)]:
+            bishop_helper(self._board, col, row, dc, dr, capturable, friendly, bishop_list)
         return bishop_list
 
-    def queen_moves(self, column, row, list_1, capture_pieces):
-        """returns a list of valid moves for a players Queen piece by calling the rook and bishop functions"""
+    def queen_moves(self, col, row, friendly, capturable):
+        """Computes Queens valid move."""
 
-        vertical_horizontal_moves = self.rook_moves(column, row, list_1, capture_pieces)
-        diagonal_moves = self.bishop_moves(column, row, list_1, capture_pieces)
+        vertical_horizontal_moves = self.rook_moves(col, row, friendly, capturable)
+        diagonal_moves = self.bishop_moves(col, row, friendly, capturable)
         queen_list = vertical_horizontal_moves + diagonal_moves
         return queen_list
 
-    def king_moves(self, column, row):
-        """assigns appropriate variables to the king helper function and returns a list of valid moves"""
+    def king_moves(self, col, row):
+        """aComputes King Moves"""
+        moves = []
+        king_helper(self._board, col, row, moves)
 
-        king_list = []
-        row_value = [- 1, 1]
-
-        for value in row_value:
-            king_helper(self._board, column + 1, row + value, king_list)
-            king_helper(self._board, column - 1, row + value, king_list)
-            king_helper(self._board, column, row + value, king_list)
-            king_helper(self._board, column + value, row, king_list)
-
-        return king_list
+        return moves
 
 
