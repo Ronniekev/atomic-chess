@@ -25,6 +25,7 @@ This was one of my first projects and an exploration into the fundamentals of ga
 
 ```bash
 python atomic_chess.py
+```
 
 🧪 Testing
 To ensure the game behaves as expected, there's a dedicated unittest test suite in test_atomic_chess.py.
