@@ -11,7 +11,7 @@ In Atomic Chess, whenever a piece is captured, an "explosion" occurs at the 8 sq
 ## 🎯 Features
 
 - Fully functioning 8x8 chess board with labeled edges.
-- Turn-based move handling (white and black).
+- Turn based move handling (white and black).
 - Valid move checking for all major pieces.
 - Atomic capture logic (explosion on capture).
 - Clear winner detection logic.
